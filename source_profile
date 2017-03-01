@@ -1,0 +1,13 @@
+# Source this file in your shell start script (eg. .bash_profile)
+
+# add to you bash profile:
+# export SHELLSCRIPTS=<path-to-shell-scripts>
+# source $SHELLSCRIPTS
+export PATH="$SHELLSCRIPTS:$PATH"
+
+cdf(){
+     . $SHELLSCRIPTS/cd-fav "$@"
+}
+
+
+
