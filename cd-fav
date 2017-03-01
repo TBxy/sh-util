@@ -1,0 +1,121 @@
+# cd-fast
+# 23.01.17  TBU
+#
+# This script is a fast way to change a directory.
+# You can simple add a directory with cd-fav add <name>.
+# Later you can switch to it with cd-fav <name>.
+#
+usage="cdf [[-a|--add]|[-l|--list]|[-e|--edit]|[-h|--help]] [name]"
+
+shopt -s extglob
+main=$HOME
+dir=""
+configfile="$main/.fav-dirs" # set the actual path name of your (DOS or Unix) config file
+histfile="$main/.hist-dirs" # set the actual path name of your (DOS or Unix) config file
+cmd_text=""
+cmd=$1
+add_name=""
+
+# Styling
+RST=$(tput sgr0) # reset
+B=$(tput bold) # bold
+H=$(tput setaf 2) # highlight
+N=$(tput setaf 5) # highlight name
+
+if [ "$cmd" == "--add" ] || [ "$cmd" == "-a" ] ; then
+    if [ "$2" != "" ]; then
+        add_name="$2"
+        echo "$add_name = $(pwd)" >> $configfile
+    else
+        echo $usage
+    fi
+    return
+elif [ "$cmd" == "--list" ] || [ "$cmd" == "-l" ] ; then
+    cmd="list"
+elif [ "$cmd" == "--edit" ] || [ "$cmd" == "-e" ] ; then
+    cmd="edit"
+elif [ "$cmd" == "--help" ] || [ "$cmd" == "-h" ]; then
+    echo $usage
+    echo ""
+    return
+elif [ "$cmd" == "" ] ; then
+    . cd-fav -l
+    echo -n "Enter name, number or 'q' (exit) [ENTER]: "
+    read dir
+    if [ "$dir" == "q" ] || [ "$dir" == "" ]; then
+        return
+    fi
+    cmd="cd"
+elif [ "$cmd" == "-" ] ; then
+    cd -
+    return
+else
+    dir=$1
+    cmd="cd"
+fi
+
+tr -d '\r' < $configfile | envsubst > $configfile.unix 
+cnt=1
+foundDir=0
+
+# check first if a history direction should be used.
+getHist=$(echo $dir | egrep -o "#h[0-9]+" | grep -o "[0-9]*")
+if [ "$getHist" != "" ] ; then
+    cd $(dirs -l +$getHist); pwd
+    return 0
+fi
+
+
+if [ "$cmd" == "list" ]; then
+    echo "${B}Favorites:$RST"
+fi
+# read favorites
+while IFS='= ' read lhs rhs
+do
+    if [[ ! $lhs =~ ^\ *# && -n $lhs ]]; then
+        rhs="${rhs%%\#*}"    # Del in line right comments
+        rhs="${rhs%%*( )}"   # Del trailing spaces
+        rhs="${rhs%\"*}"     # Del opening string quotes 
+        rhs="${rhs#\"*}"     # Del closing string quotes 
+        DIR="${rhs}"
+        NAME=$lhs
+        if [ "$cmd" == "cd" ]; then
+            if [ "$dir" == "$NAME" ] || [ "$cnt" ==  "$dir" ]; then
+                cd $DIR; pwd
+                echo $(pwd) >> $histfile
+                pushd $(pwd) >> /dev/null
+                foundDir=1
+            fi
+        else
+            printf "$H[$cnt]$RST\t$N$NAME:$RST $DIR\n"
+        fi
+        cnt="$((cnt + 1))"
+    fi
+done < $configfile.unix
+rm $configfile.unix
+
+# read history
+if [ "$cmd" == "list" ]; then
+    #tail -n 10 $histfile
+    #dirs -v
+    echo
+    echo "${B}History:$RST"
+    dirs -v | tail -n +2 | sed -r "s/\s*([0-9]+)\s*/$H\[#h\1\]$RST\t/" | head -n 15
+fi
+
+
+if [ "$cmd" == "cd" ] && [ "$foundDir" == "0" ]; then
+    cd $dir; pwd
+    echo $(pwd) >> $histfile
+    pushd $(pwd) >> /dev/null
+fi
+
+if [ "$cmd" == "edit" ]; then
+    if [ "$EDITOR" == "" ]; then
+        nano $configfile
+    else
+        $EDITOR $configfile
+    fi
+fi
+
+return
