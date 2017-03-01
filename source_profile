@@ -1,12 +1,12 @@
 # Source this file in your shell start script (eg. .bash_profile)
-
 # add to you bash profile:
-# export SHELLSCRIPTS=<path-to-shell-scripts>
-# source $SHELLSCRIPTS
-export PATH="$SHELLSCRIPTS:$PATH"
+# export SHUTIL=<path-to-shell-scripts>
+# source $SHUTIL/source_profile
+
+export PATH="$SHUTIL:$PATH"
 
 cdf(){
-     . $SHELLSCRIPTS/cd-fav "$@"
+     . $SHUTIL/cd-fav "$@"
 }
 
 
